@@ -89,11 +89,14 @@ def _try_idm_vton(person_path: str, clothing_path: str) -> str:
         logger.warning("  [IDM-VTON] HF_TOKEN 未设置或为占位符，可能连接较慢或被限流")
         hf_token = None
 
-    # gradio_client >= 1.0 用 token=, 旧版用 hf_token=
+    # gradio_client 1.3.x 用 hf_token=, 更新版本用 token=
     try:
-        client = Client(space_id, token=hf_token)
+        client = Client(space_id, hf_token=hf_token)
     except TypeError:
-        client = Client(space_id)
+        try:
+            client = Client(space_id, token=hf_token)
+        except TypeError:
+            client = Client(space_id)
     conn_time = time.time() - t0
     logger.info("  [IDM-VTON] 连接成功  耗时=%.1fs", conn_time)
 
