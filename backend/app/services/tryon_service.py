@@ -6,6 +6,7 @@ import time
 import httpx
 import io
 from pathlib import Path
+from typing import Tuple
 from PIL import Image
 
 # 确保 .env 被加载（uvicorn 不会自动加载）
@@ -169,7 +170,7 @@ def _diagnose_hf_error(e: Exception) -> str:
     return f"未知错误: {type(e).__name__}: {str(e)[:150]}"
 
 
-async def process_tryon(person_image_url: str, clothing_image_url: str) -> tuple[str, str]:
+async def process_tryon(person_image_url: str, clothing_image_url: str) -> Tuple[str, str]:
     """
     虚拟试穿合成 — 多级降级策略:
     1. IDM-VTON HF Space (免费 AI 合成)
