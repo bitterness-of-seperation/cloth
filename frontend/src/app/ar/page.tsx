@@ -330,6 +330,12 @@ export default function ARPage() {
 
   const startCamera = async () => {
     try {
+      // 检查是否在浏览器环境
+      if (typeof window === 'undefined' || !navigator?.mediaDevices?.getUserMedia) {
+        console.error('getUserMedia not supported');
+        return;
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
       });
