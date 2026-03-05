@@ -25,19 +25,10 @@ logger = logging.getLogger("app")
 
 app = FastAPI(title="虚拟试穿 API", version="1.0.0")
 
-_origins = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-]
-if os.getenv("CORS_ORIGINS"):
-    _origins.extend(s.strip() for s in os.getenv("CORS_ORIGINS", "").split(",") if s.strip())
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
