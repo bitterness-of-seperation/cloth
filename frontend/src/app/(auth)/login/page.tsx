@@ -44,9 +44,13 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = async (provider: "google" | "github") => {
+    const origin = window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/tryon` },
+      options: {
+        // 统一走服务端回调，在 /auth/callback 中交换 code 创建会话，再根据 next 跳转
+        redirectTo: `${origin}/auth/callback?next=/tryon`,
+      },
     });
     if (error) {
       toast.error("登录失败", { description: error.message });

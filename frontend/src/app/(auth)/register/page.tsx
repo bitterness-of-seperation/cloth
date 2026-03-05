@@ -29,22 +29,44 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const origin = window.location.origin;
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { username },
+        // 邮箱验证或 magic link 统一走回调路由
+        emailRedirectTo: `${origin}/auth/callback?next=/tryon`,
       },
     });
 
     if (error) {
       toast.error("注册失败", { description: error.message });
-    } else {
+      setLoading(false);
+      return;
+    }
+
+    // 检查是否需要邮箱验证
+    if (data?.user && !data.user.confirmed_at) {
       toast.success("注册成功", {
         description: "请查看邮箱完成验证",
       });
       router.push("/login");
+    } else if (data?.session) {
+      // 如果不需要验证或已自动登录，直接跳转
+      toast.success("注册成功", {
+        description: "正在跳转...",
+      });
+      router.push("/tryon");
+      router.refresh();
+    } else {
+      toast.success("注册成功", {
+        description: "请登录",
+      });
+      router.push("/login");
     }
+    
     setLoading(false);
   };
 

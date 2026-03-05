@@ -29,11 +29,17 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAuthPage =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register");
+  const pathname = request.nextUrl.pathname;
 
-  if (!user && !isAuthPage && request.nextUrl.pathname !== "/") {
+  const isAuthPage =
+    pathname.startsWith("/login") || pathname.startsWith("/register");
+
+  // 回调路径用于处理 Supabase 返回的 code，必须允许未登录用户访问
+  const isAuthCallback = pathname.startsWith("/auth/callback");
+
+  const isPublicPath = isAuthPage || isAuthCallback;
+
+  if (!user && !isPublicPath && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
