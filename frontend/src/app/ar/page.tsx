@@ -187,9 +187,15 @@ export default function ARPage() {
   const [fps, setFps] = useState(0);
   const [removeBg, setRemoveBg] = useState(true);
   const [useBodyMask, setUseBodyMask] = useState(true);
+  const [isBrowser, setIsBrowser] = useState(false);
 
   const clothingInputRef = useRef<HTMLInputElement>(null);
   const fpsCountRef = useRef({ frames: 0, lastTime: performance.now() });
+
+  // 检测浏览器环境
+  useEffect(() => {
+    setIsBrowser(true);
+  }, []);
 
   const drawFrame = useCallback(() => {
     const video = videoRef.current;
@@ -330,9 +336,9 @@ export default function ARPage() {
 
   const startCamera = async () => {
     try {
-      // 检查是否在浏览器环境且支持 getUserMedia
-      if (typeof window === 'undefined') {
-        return; // SSR 环境，直接返回
+      // 只在客户端环境检查
+      if (!isBrowser) {
+        return;
       }
       
       if (!navigator?.mediaDevices?.getUserMedia) {
