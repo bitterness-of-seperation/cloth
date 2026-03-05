@@ -330,9 +330,15 @@ export default function ARPage() {
 
   const startCamera = async () => {
     try {
-      // 检查是否在浏览器环境
-      if (typeof window === 'undefined' || !navigator?.mediaDevices?.getUserMedia) {
-        console.error('getUserMedia not supported');
+      // 检查是否在浏览器环境且支持 getUserMedia
+      if (typeof window === 'undefined') {
+        return; // SSR 环境，直接返回
+      }
+      
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        toast.error("浏览器不支持摄像头访问", {
+          description: "请使用现代浏览器（Chrome、Firefox、Safari）并确保使用 HTTPS",
+        });
         return;
       }
       
