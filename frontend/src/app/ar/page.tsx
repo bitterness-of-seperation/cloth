@@ -189,13 +189,24 @@ export default function ARPage() {
   const [removeBg, setRemoveBg] = useState(true);
   const [useBodyMask, setUseBodyMask] = useState(true);
   const [isBrowser, setIsBrowser] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const clothingInputRef = useRef<HTMLInputElement>(null);
   const fpsCountRef = useRef({ frames: 0, lastTime: performance.now() });
 
-  // 检测浏览器环境
+  // 检测浏览器环境和设备类型
   useEffect(() => {
     setIsBrowser(true);
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    setIsMobile(mobile);
+    
+    if (mobile) {
+      toast.error("移动端暂不支持 AR 功能", {
+        description: "AR 实时试穿需要较高的设备性能，建议使用电脑访问。您可以使用「虚拟试穿」功能。",
+        duration: 8000,
+      });
+    }
   }, []);
 
   const drawFrame = useCallback(() => {
@@ -341,10 +352,34 @@ export default function ARPage() {
       if (!isBrowser) {
         return;
       }
+
+      // 移动端不支持
+      if (isMobile) {
+        toast.error("移动端暂不支持 AR 功能", {
+          description: "请使用电脑访问，或使用「虚拟试穿」功能",
+          duration: 5000,
+        });
+        return;
+      }
       
+      // 检查是否支持 getUserMedia
       if (!navigator?.mediaDevices?.getUserMedia) {
         toast.error("浏览器不支持摄像头访问", {
-          description: "请使用现代浏览器（Chrome、Firefox、Safari）并确保使用 HTTPS",
+          description: "请使用现代浏览器（Chrome、Firefox、Safari）",
+        });
+        return;
+      }
+
+      // 检查是否为安全上下文（HTTPS 或 localhost）
+      const isSecureContext = window.isSecureContext;
+      const isLocalhost = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.hostname === '[::1]';
+      
+      if (!isSecureContext && !isLocalhost) {
+        toast.error("需要 HTTPS 才能访问摄像头", {
+          description: "请使用 HTTPS 访问，或在 Chrome 中访问 chrome://flags/#unsafely-treat-insecure-origin-as-secure 添加此域名",
+          duration: 10000,
         });
         return;
       }
@@ -505,9 +540,29 @@ export default function ARPage() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold">AR 实时试穿</h1>
         <p className="text-muted-foreground mt-2">
-          打开摄像头，选择服装，实时查看穿搭效果
+          {isMobile 
+            ? "移动端暂不支持 AR 功能，请使用电脑访问或使用「虚拟试穿」"
+            : "打开摄像头，选择服装，实时查看穿搭效果"
+          }
         </p>
       </div>
+
+      {isMobile && (
+        <Card className="mb-6 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <h3 className="font-semibold mb-1">移动端不支持</h3>
+                <p className="text-sm text-muted-foreground">
+                  AR 实时试穿需要加载大型 AI 模型，移动设备性能不足。
+                  建议使用电脑访问，或使用「虚拟试穿」功能获得更好的体验。
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
