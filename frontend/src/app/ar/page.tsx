@@ -401,8 +401,7 @@ export default function ARPage() {
       const { FilesetResolver, PoseLandmarker, ImageSegmenter } = await import("@mediapipe/tasks-vision");
       const vision = await FilesetResolver.forVisionTasks(WASM_PATH);
 
-      // 检测是否为移动设备
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      // 根据设备类型选择处理器
       const delegate = isMobile ? "CPU" : "GPU"; // 移动端使用 CPU，桌面端使用 GPU
 
       // 并行加载两个模型
