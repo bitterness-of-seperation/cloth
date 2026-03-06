@@ -25,13 +25,30 @@ logger = logging.getLogger("app")
 
 app = FastAPI(title="虚拟试穿 API", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    """确保所有响应都有正确的 CORS 头"""
+    # 处理 OPTIONS 预检请求
+    if request.method == "OPTIONS":
+        return JSONResponse(
+            content={},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Max-Age": "3600",
+            }
+        )
+    
+    response = await call_next(request)
+    
+    # 强制设置 CORS 头
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
 
 
 @app.middleware("http")
@@ -50,7 +67,16 @@ async def request_logging_middleware(request: Request, call_next):
     except Exception as exc:
         elapsed = time.time() - start
         logger.exception("[%s] !!! %s %s  error=%s  %.2fs", req_id, request.method, request.url.path, exc, elapsed)
-        return JSONResponse(status_code=500, content={"detail": str(exc)}, headers={"X-Request-Id": req_id})
+        return JSONResponse(
+            status_code=500, 
+            content={"detail": str(exc)}, 
+            headers={
+                "X-Request-Id": req_id,
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
 
 
 app.include_router(tryon.router, prefix="/api/tryon", tags=["tryon"])

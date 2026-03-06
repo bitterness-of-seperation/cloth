@@ -1,5 +1,6 @@
 "use client";
 
+import { getApiUrl } from "@/lib/config";
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -107,7 +108,7 @@ export default function TryOnPage() {
 
       goStage("infer");
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/api/tryon/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

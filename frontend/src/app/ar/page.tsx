@@ -15,8 +15,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
 
 // MediaPipe 模型 URL
+// 使用轻量级模型以支持移动端
 const POSE_MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task";
+  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
 // selfie_multiclass 分割模型：可识别 background/hair/body-skin/face-skin/clothes/others
 const SEG_MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite";
@@ -359,17 +360,21 @@ export default function ARPage() {
       const { FilesetResolver, PoseLandmarker, ImageSegmenter } = await import("@mediapipe/tasks-vision");
       const vision = await FilesetResolver.forVisionTasks(WASM_PATH);
 
+      // 检测是否为移动设备
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const delegate = isMobile ? "CPU" : "GPU"; // 移动端使用 CPU，桌面端使用 GPU
+
       // 并行加载两个模型
       const [pose, seg] = await Promise.all([
         PoseLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate: "GPU" },
+          baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate },
           runningMode: "VIDEO",
           numPoses: 1,
-          minPoseDetectionConfidence: 0.6,
-          minTrackingConfidence: 0.6,
+          minPoseDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
         }),
         ImageSegmenter.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: SEG_MODEL_URL, delegate: "GPU" },
+          baseOptions: { modelAssetPath: SEG_MODEL_URL, delegate },
           runningMode: "VIDEO",
           outputCategoryMask: true,
           outputConfidenceMasks: false,
@@ -382,10 +387,32 @@ export default function ARPage() {
       setSegReady(true);
       drawFrame();
     } catch (e) {
-      console.error(e);
-      toast.error("无法访问摄像头或加载模型", {
-        description: e instanceof Error ? e.message : "请重试",
-      });
+      console.error('AR 初始化错误:', e);
+      
+      // 更详细的错误提示
+      let errorMsg = "无法加载 AR 模型";
+      let errorDesc = "请重试";
+      
+      if (e instanceof Error) {
+        if (e.message.includes('WebAssembly')) {
+          errorMsg = "模型加载失败";
+          errorDesc = "您的设备可能不支持 WebAssembly，请尝试使用最新版本的 Chrome 或 Safari 浏览器";
+        } else if (e.message.includes('camera') || e.message.includes('getUserMedia')) {
+          errorMsg = "无法访问摄像头";
+          errorDesc = "请允许浏览器访问摄像头权限";
+        } else {
+          errorDesc = e.message;
+        }
+      }
+      
+      toast.error(errorMsg, { description: errorDesc });
+      
+      // 停止摄像头
+      if (videoRef.current?.srcObject) {
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
+        videoRef.current.srcObject = null;
+      }
+      setCameraActive(false);
     }
   };
 
