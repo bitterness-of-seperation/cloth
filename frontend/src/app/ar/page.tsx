@@ -190,6 +190,7 @@ export default function ARPage() {
   const [useBodyMask, setUseBodyMask] = useState(true);
   const [isBrowser, setIsBrowser] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [mobileChecked, setMobileChecked] = useState(false);
 
   const clothingInputRef = useRef<HTMLInputElement>(null);
   const fpsCountRef = useRef({ frames: 0, lastTime: performance.now() });
@@ -197,15 +198,20 @@ export default function ARPage() {
   // 检测浏览器环境和设备类型
   useEffect(() => {
     setIsBrowser(true);
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-    setIsMobile(mobile);
     
-    if (mobile) {
-      toast.error("移动端暂不支持 AR 功能", {
-        description: "AR 实时试穿需要较高的设备性能，建议使用电脑访问。您可以使用「虚拟试穿」功能。",
-        duration: 8000,
-      });
+    // 检测移动设备
+    if (typeof window !== 'undefined') {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      setIsMobile(mobile);
+      setMobileChecked(true);
+      
+      if (mobile) {
+        toast.error("移动端暂不支持 AR 功能", {
+          description: "AR 实时试穿需要较高的设备性能，建议使用电脑访问。您可以使用「虚拟试穿」功能。",
+          duration: 8000,
+        });
+      }
     }
   }, []);
 
@@ -540,14 +546,14 @@ export default function ARPage() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold">AR 实时试穿</h1>
         <p className="text-muted-foreground mt-2">
-          {isMobile 
+          {mobileChecked && isMobile 
             ? "移动端暂不支持 AR 功能，请使用电脑访问或使用「虚拟试穿」"
             : "打开摄像头，选择服装，实时查看穿搭效果"
           }
         </p>
       </div>
 
-      {isMobile && (
+      {mobileChecked && isMobile && (
         <Card className="mb-6 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
