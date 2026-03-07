@@ -18,42 +18,50 @@ import {
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (!username.trim()) {
+      toast.error("请输入用户名");
+      return;
+    }
+
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // 使用匿名登录（每次都创建新会话）
+      const { data, error } = await supabase.auth.signInAnonymously({
+        options: {
+          data: { username: username.trim() }
+        }
+      });
 
-    if (error) {
-      toast.error("登录失败", { description: error.message });
-    } else {
-      toast.success("登录成功");
-      router.push("/tryon");
-      router.refresh();
-    }
-    setLoading(false);
-  };
+      if (error) {
+        toast.error("登录失败", { description: error.message });
+        setLoading(false);
+        return;
+      }
 
-  const handleOAuthLogin = async (provider: "google" | "github") => {
-    const origin = window.location.origin;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        // 统一走服务端回调，在 /auth/callback 中交换 code 创建会话，再根据 next 跳转
-        redirectTo: `${origin}/auth/callback?next=/tryon`,
-      },
-    });
-    if (error) {
-      toast.error("登录失败", { description: error.message });
+      if (data?.session) {
+        toast.success("登录成功", {
+          description: `欢迎回来，${username}！`,
+        });
+        router.push("/tryon");
+        router.refresh();
+      } else {
+        toast.error("登录失败", { description: "未能创建会话" });
+      }
+    } catch (error) {
+      toast.error("登录失败", { 
+        description: error instanceof Error ? error.message : "未知错误" 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -62,30 +70,20 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">登录</CardTitle>
-          <CardDescription>登录你的账户以使用虚拟试穿</CardDescription>
+          <CardDescription>输入昵称即可登录使用</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">邮箱</Label>
+              <Label htmlFor="username">用户名</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="输入你的昵称"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">密码</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                autoFocus
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -93,30 +91,11 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                或使用第三方账号
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              onClick={() => handleOAuthLogin("google")}
-            >
-              Google
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleOAuthLogin("github")}
-            >
-              GitHub
-            </Button>
+          <div className="mt-4 p-3 bg-muted rounded-lg">
+            <p className="text-xs text-muted-foreground">
+              💡 提示：每次登录都会创建新的匿名会话。
+              如需保留数据，请不要清除浏览器缓存。
+            </p>
           </div>
         </CardContent>
         <CardFooter className="justify-center">

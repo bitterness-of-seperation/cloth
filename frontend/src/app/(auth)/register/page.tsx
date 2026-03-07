@@ -18,64 +18,59 @@ import {
 import { toast } from "sonner";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
-
-    const origin = window.location.origin;
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username },
-        // 邮箱验证或 magic link 统一走回调路由
-        emailRedirectTo: `${origin}/auth/callback?next=/tryon`,
-      },
-    });
-
-    if (error) {
-      toast.error("注册失败", { description: error.message });
-      setLoading(false);
+    
+    if (!username.trim()) {
+      toast.error("请输入用户名");
       return;
     }
 
-    // 检查是否需要邮箱验证
-    if (data?.user && !data.user.confirmed_at) {
-      toast.success("注册成功", {
-        description: "请查看邮箱完成验证",
+    setLoading(true);
+
+    try {
+      // 使用匿名登录
+      const { data, error } = await supabase.auth.signInAnonymously({
+        options: {
+          data: { username: username.trim() }
+        }
       });
-      router.push("/login");
-    } else if (data?.session) {
-      // 如果不需要验证或已自动登录，直接跳转
-      toast.success("注册成功", {
-        description: "正在跳转...",
+
+      if (error) {
+        toast.error("注册失败", { description: error.message });
+        setLoading(false);
+        return;
+      }
+
+      if (data?.session) {
+        toast.success("注册成功", {
+          description: `欢迎，${username}！`,
+        });
+        router.push("/tryon");
+        router.refresh();
+      } else {
+        toast.error("注册失败", { description: "未能创建会话" });
+      }
+    } catch (error) {
+      toast.error("注册失败", { 
+        description: error instanceof Error ? error.message : "未知错误" 
       });
-      router.push("/tryon");
-      router.refresh();
-    } else {
-      toast.success("注册成功", {
-        description: "请登录",
-      });
-      router.push("/login");
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
     <div className="flex items-center justify-center min-h-[80vh]">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">注册</CardTitle>
-          <CardDescription>创建新账户，开启虚拟试穿之旅</CardDescription>
+          <CardTitle className="text-2xl">快速开始</CardTitle>
+          <CardDescription>输入昵称即可开始使用，无需邮箱验证</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
@@ -84,39 +79,29 @@ export default function RegisterPage() {
               <Input
                 id="username"
                 type="text"
-                placeholder="你的昵称"
+                placeholder="输入你的昵称"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                minLength={2}
+                maxLength={20}
+                autoFocus
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">邮箱</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">密码</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="至少 6 位"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
+              <p className="text-xs text-muted-foreground">
+                2-20 个字符，支持中文、英文、数字
+              </p>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "注册中..." : "注册"}
+              {loading ? "创建中..." : "立即开始"}
             </Button>
           </form>
+          
+          <div className="mt-4 p-3 bg-muted rounded-lg">
+            <p className="text-xs text-muted-foreground">
+              💡 提示：使用匿名账号，数据保存在本地浏览器中。
+              清除浏览器数据会丢失账号信息。
+            </p>
+          </div>
         </CardContent>
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
